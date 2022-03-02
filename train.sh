@@ -41,7 +41,7 @@ test_data_files=$None
 #test_data_files=${datapath}/data_test.csv
 ## In case of prediction or evaluation, it is possible to put the data split not using to None (train_data_files=$None)
 
-## For csv dataset, set the good columns name (label_column is text classification fine-tuning, comming soon)
+## For csv dataset, set the good columns name (label_column is for text classification fine-tuning, comming soon)
 text_column=text
 label_column=$None
 group_texts=True
@@ -51,7 +51,7 @@ max_samples=$None
 #max_samples="train=800"
 #max_samples="train=800,validation=100,test=100"
 
-## Batch size and max length (make sur max_length < n_positions/max_position_embeddings of the model)
+## Batch size and max length (make sure max_length < n_positions/max_position_embeddings of the model)
 batch_size=32
 max_length=512
 
@@ -121,8 +121,7 @@ python3 -m src.trainer \
 		--num_workers 4 \
 		--max_length $max_length \
 		--model_params $model_params \
-		--optimizer_name Adam \
-		--learning_rate 0.00001 \
+		--optimizer_params adam,lr=0.00001,beta1=0.9,beta2=0.99,eps=0.00000001 \
 		--lr_factor 0.1 \
 		--lr_patience 4 \
 		--validation_metrics $validation_metrics \
@@ -133,10 +132,10 @@ python3 -m src.trainer \
 		--limit_test_batches 1.0 \
 		--eval_only $eval_only \
 		--eval_split $eval_split \
-		--val_check_interval 0.25 \
-		--early_stopping_patience 5 \
+		--val_check_interval 0.5 \
+		--early_stopping_patience 10 \
 		--accumulate_grad_batches 1 \
-		--save_top_k 5 \
+		--save_top_k 1 \
 		--strategy $strategy \
 		--auto_scale_batch_size $auto_scale_batch_size \
 		--auto_lr_find $auto_lr_find \

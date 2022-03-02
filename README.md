@@ -23,9 +23,12 @@ python -m src.tokenizing -fe gpt2 -p ${datapath}/data_train.csv,${datapath}/data
 # ...
 ```
 
-## 3. Dictionary (deprecated)
+The tokenizer will be saved in ```${save_to}/tokenizer.pt```.
 
-You can, instead of pre-training a tokenizer, build a simple vocabulary (by dividing the sentences according to the whitespace character), then build the tokenizer with this vocabulary during the training/evaluation (```tokenizer_params="vocab_file=str(${save_to}/word_to_id.txt),t_class=str(bert_tokenizer),..."```).
+## 3. Dictionary (work, but deprecated for the moment)
+
+You can, instead of pre-training a tokenizer, build a simple vocabulary (by dividing the sentences according to the whitespace character - 
+default option, or by dividing sentences into phonemes, ...), then build the tokenizer with this vocabulary during the training/evaluation (```tokenizer_params="vocab_file=str(${save_to}/word_to_id.txt),t_class=str(bert_tokenizer),..."```).
 
 ```bash
 st=my/save/path
@@ -37,7 +40,7 @@ text_column=text
 python -m src.utils -p ${datapath}/data_train.csv,${datapath}/data_val.csv,${datapath}/data_test.csv -st $st -tc $text_column
 ```
 
-But this option is not recommended (any deep sanitary check has been done so far).
+But this option is not recommended for the moment (any deep sanitary check has been done so far).
 
 ## 4. Train and/or evaluate a model (from scratch or from a pre-trained model and/or tokenizer)  
 See [trainer.py](src/trainer.py) and [train.sh](train.sh) for all other parameters (and descriptions)

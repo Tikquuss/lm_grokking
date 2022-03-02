@@ -1,4 +1,3 @@
-import torch
 import math
 
 def multi_acc(y, y_hat):

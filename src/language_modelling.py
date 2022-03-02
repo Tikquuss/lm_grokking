@@ -3,8 +3,7 @@ import torch.optim as optim
 import pytorch_lightning as pl
 
 from .metrics import get_compute_metrics_lm
-
-OPTIMIZER_DIC = {"Adam": optim.Adam}
+from .optim import get_optimizer
 
 class LMLightningModule(pl.LightningModule):
     """Language Modeling (CLM and MLM) Model"""
@@ -12,8 +11,7 @@ class LMLightningModule(pl.LightningModule):
         self,
         model,
         task : str,
-        optimizer_name: str,
-        learning_rate: float,
+        optimizer_params: str,
         lr_factor: float,
         lr_patience: int,
         decoder_start_token_id : int = None
@@ -21,8 +19,7 @@ class LMLightningModule(pl.LightningModule):
         """
         model : transformer model
         task (str) : mlm or clm
-        optimizer_name (str) : optimizer name : Adam, ...
-        learning_rate (float) : learning rate
+        optimizer_params (str) : optimizer parameters
         lr_factor (float) : learning rate scheduler factor
         lr_patience (int) : learning rate scheduler patience
         decoder_start_token_id (int) : start token of sentences for text generation (clm only)
@@ -30,17 +27,14 @@ class LMLightningModule(pl.LightningModule):
         super(LMLightningModule, self).__init__()
         self.model = model
         self.task = task
-        self.learning_rate = learning_rate
+        self.optimizer_params = optimizer_params
         self.lr_factor = lr_factor
         self.lr_patience = lr_patience
-        self.optimizer_name = optimizer_name
         self.decoder_start_token_id = decoder_start_token_id
         self.compute_metrics_lm = get_compute_metrics_lm(task)
         
     def configure_optimizers(self):
-        optimizer = OPTIMIZER_DIC[self.optimizer_name](
-            self.model.parameters(), lr=self.learning_rate
-        )
+        optimizer = get_optimizer(self.model.parameters(), self.optimizer_params)
         lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, "min", factor=self.lr_factor, patience=self.lr_patience
         )
@@ -64,8 +58,8 @@ class LMLightningModule(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         loss, output = self._compute_loss(batch, prefix="train_")
-        output["loss"] = loss
         self.log_dict(output, prog_bar=True)
+        output["loss"] = loss
         return output
 
     def validation_step(self, batch, batch_idx):
@@ -85,15 +79,14 @@ class LMLightningModule(pl.LightningModule):
         "MLM only"
         mask_token_index = features.pop("mask_token_index", None)
         output = self.model(**features)
-        logits = output.logits.cpu().detach()
-        y_hat = torch.log_softmax(logits, dim=-1).argmax(dim=-1)
+        y_hat = output.logits.cpu().detach().argmax(dim=-1)
         output = {
             "input_ids" : features["input_ids"], 
-            #"labels" : features["labels"][:,mask_token_index], 
-            "labels" : features["labels"][mask_token_index], 
-            "output_ids" : y_hat, 
-            #"pred_labels" : y_hat[:,mask_token_index],
-            "pred_labels" : y_hat[mask_token_index]
+             "output_ids" : y_hat, 
+            #"labels" : features["labels"][mask_token_index], 
+            #"pred_labels" : y_hat[mask_token_index],
+            "labels" : [x_i[m] for x_i, m in zip(features["labels"], mask_token_index)], 
+            "pred_labels" : [x_i[m] for x_i, m in zip(y_hat, mask_token_index)], 
         }
         return output
 
@@ -146,7 +139,5 @@ class LMLightningModule(pl.LightningModule):
             "output_ids" : output_ids
         }
         
-        if features.get("labels", None) is not None : output["labels"] = features["labels"]
+        #if features.get("labels", None) is not None : output["labels"] = features["labels"]
         return output
-
-

@@ -88,8 +88,12 @@ def get_parser():
     if parser.parse_known_args()[0].model_params: pass
 
     ## Optimizer
-    parser.add_argument("--optimizer_name", type=str, default="Adam", help="optimizer name : Adam, ...") # optim : training
-    parser.add_argument("--learning_rate", type=float, default=1e-5, help="learning rate") # optim : training
+    parser.add_argument("--optimizer_params", type=str, default="adam,lr=0.00001,beta1=0.9,beta2=0.99,eps=0.00000001", help="""
+                - optimizer parameters : adam_inverse_sqrt,lr=0.00001,beta1=0.9,beta2=0.99,eps=0.00000001 ...
+                - classes : CustomAdam (custom_adam), Adam (adam), AdamInverseSqrtWithWarmup (adam_inverse_sqrt), AdamCosineWithWarmup (adam_cosine),
+                            Adadelta (adadelta), Adagrad (adagrad), Adamax (adamax), ASGD (asgd), SGD (sgd), RMSprop (rmsprop), Rprop (rprop)
+                - See https://pytorch.org/docs/stable/optim.html for optimizers parameters
+    """) # optim : training
     parser.add_argument("--lr_factor", type=float, default=0.1, help="learning rate scheduler factor") # optim : training
     parser.add_argument("--lr_patience", type=int, default=4, help="learning rate scheduler patience") # optim : training
 
@@ -103,11 +107,12 @@ def get_parser():
     parser.add_argument("--limit_test_batches", type=float, default=1., help="limit batches for test data") # trainer
     parser.add_argument("--eval_only", type=bool_flag, default=False, help="Only run evaluations") # trainer
     parser.add_argument("--eval_split", choices=["train", "validation", "test"], default="test", help="evaluation on training/validation/test data") # evaluation
-    parser.add_argument("--val_check_interval", type=float, default=0.25, help="How often to check the validation set. Use float to check within a training epoch, \
+    parser.add_argument("--val_check_interval", type=float, default=0.5, help="How often to check the validation set. Use float to check within a training epoch, \
                                                                                 use int to check every n steps (batches)") # trainer
-    parser.add_argument("--early_stopping_patience", type=int, default=5, help="Early stopping patience") # trainer
+    parser.add_argument("--early_stopping_patience", type=int, default=10, 
+                        help="Early stopping patience : If the model does not converge during these numbers of steps, stop the training") # trainer
     parser.add_argument("--accumulate_grad_batches", type=int, default=1, help="Accumulates grads every k batches or as set up in the dict (1 = no accumulation)") # trainer
-    parser.add_argument("--save_top_k", type=int, default=5, help="""The best `save_top_k` models according to the quantity monitored will be saved. 
+    parser.add_argument("--save_top_k", type=int, default=1, help="""The best `save_top_k` models according to the quantity monitored will be saved. 
                                     If save_top_k == 0, no models are saved. if save_top_k == -1, all models are saved.""") # trainer
     parser.add_argument("--strategy", type=str, default="ddp", help="ddp (DistributedDataParallel), ddp_spawn ...") # trainer
     parser.add_argument("--auto_scale_batch_size", type=to_none, default=None, # "binsearch" 
@@ -232,6 +237,7 @@ def main(params) :
         optional params : use_lang_emb (False), n_langs (1), sample_alpha (0)
         """
         model_params = params.model_params
+        assert model_params is not None
         model_params.n_words = tokenizer.vocab_size 
         model_params.pad_index = getattr(tokenizer, "pad_token_id", None)
         if model_params.pad_index is None :
@@ -307,8 +313,7 @@ def main(params) :
     pl_model = LMLightningModule(
         model=model,
         task=params.task,
-        optimizer_name=params.optimizer_name,
-        learning_rate=params.learning_rate,
+        optimizer_params=params.optimizer_params,
         lr_factor=params.lr_factor,
         lr_patience=params.lr_patience,
         decoder_start_token_id=tokenizer.pad_token_id
@@ -336,7 +341,7 @@ def main(params) :
             key_0 = keys[0]
             for batch in tqdm.tqdm(output, desc="Save in %s ..." % params.output_file):
                 for i in range(len(batch[key_0])) :
-                    of.writelines([f"{k} : %s\n"% tokenizer.decode(batch[k][i], skip_special_tokens=True) for k in keys])
+                    of.writelines([f"{k} : %s\n"% tokenizer.decode(batch[k][i], skip_special_tokens=False) for k in keys])
                     of.write('\n')
 
         logger.info(f"{logg_text} completed.")

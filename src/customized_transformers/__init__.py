@@ -48,9 +48,13 @@ class Custom2HuggingFace(nn.Module):
             # probability of masking out / randomize / not modify words to predict
             word_mask, word_keep, word_rand = [float(p) for p in self.word_mask_keep_rand.split(",")]
             self.pred_probs = torch.FloatTensor([word_mask, word_keep, word_rand])
-            # probabilty to predict a word
-            data_counts = {k: 1 for k in range(self.n_words)} # TODO : load from data
+            # TODO : load data_counts from data 
+            # The value for a given token must correspond to the number of times this token appears in the dataset, not 1 as here
+            # The idea is to make sure that the most frequent words are more likely to be masked than other words
+            data_counts = {k: 1 for k in range(self.n_words)}
             counts = np.array(list(data_counts.values()))
+            # TODO : make sure counts is 0 for special symbols (CLS_WORD, PAD_WORD, SEP_WORD, UNK_WORD, MASK_WORD, BOS_WORD, EOS_WORD ...)
+            # probabilty to predict a word 
             params.mask_scores = np.maximum(counts, 1) ** -self.sample_alpha
             params.mask_scores[self.pad_index] = 0  # do not predict <PAD> index
             params.mask_scores[counts == 0] = 0     # do not predict special tokens
@@ -92,7 +96,7 @@ class Custom2HuggingFace(nn.Module):
         labels=None,
         return_dict=True,
     ):
-        """All the options below work normally"""
+        """All the options (and sub-options) below work normally"""
         flag = True 
         if flag :
             hidden_states, _, _ = self.fwd(input_ids, attention_mask, token_type_ids, position_ids)
@@ -251,7 +255,7 @@ class Custom2HuggingFace(nn.Module):
                 langs=None
             )
         else:
-            length_penalty = 1 # values < 1.0 favor shorter sentences, while values > 1.0 favor longer ones.
+            length_penalty = 1.0 # values < 1.0 favor shorter sentences, while values > 1.0 favor longer ones.
             generated, lengths = TransformerModel.generate_beam(
                 self.transformer,
                 x=x, 
@@ -295,7 +299,12 @@ if __name__ == "__main__":
         "n_langs" : 2
     })
 
+    # model = HFTransformer(params, is_encoder=True, with_output=True)
+    # setattr(model, "generate", TransformerModel.generate)
+    # setattr(model, "generate_beam", TransformerModel.generate_beam)
+
     model = TransformerModel(params, is_encoder=True, with_output=True)
+    #model.load_state_dict("../../../checkpoints.pth")
 
     slen, bs = 5, 2
     x = torch.randint(high=vocab_size, size =(slen, bs),  dtype=torch.long) 
@@ -306,6 +315,16 @@ if __name__ == "__main__":
     
     # generate text - translate / convert to text
     max_len = int(1.5 * lengths.max().item() + 10)
-    #generated, lengths = model.generate(...)
+    generated, lengths = TransformerModel.generate(
+        model,
+        x=x, 
+        lengths=lengths, 
+        src_enc=None, 
+        src_len=None, 
+        tgt_lang_id=0, 
+        max_len=max_length, 
+        sample_temperature=None, 
+        langs=None
+    )
 
-    
+    print(generated)

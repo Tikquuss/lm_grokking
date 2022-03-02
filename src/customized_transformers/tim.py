@@ -1,11 +1,16 @@
 """
-code for Transformers with Independent Mechanisms & BERT
+code for Transformers with Independent Mechanisms & BERT 
+
+Transformers with Competitive Ensembles of Independent Mechanisms
+Alex Lamb, Di He, Anirudh Goyal, Guolin Ke, Chien-Feng Liao, Mirco Ravanelli, Yoshua Bengio
+https://arxiv.org/abs/2103.00336
 """
 
 import torch
-import math
 import torch.nn as nn
 import torch.nn.functional as F
+
+import math
 
 class GroupLayerNorm(nn.Module):
     def __init__(

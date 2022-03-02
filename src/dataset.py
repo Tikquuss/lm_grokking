@@ -56,7 +56,6 @@ def mlm_collate_fn(features, mask_token_id : int, mlm_collator : DataCollatorFor
     
     features['input_ids'] = torch.LongTensor(x_mlm['input_ids'])
     features['labels'] = torch.LongTensor(x_mlm['labels']) 
-    #features["mask_token_index"] = torch.where(features['input_ids'] == mask_token_id)[1]
     # https://github.com/huggingface/transformers/blob/v4.16.2/src/transformers/data/data_collator.py#L767
     features["mask_token_index"] = features['labels'] != -100
     
@@ -270,6 +269,12 @@ class LMLightningDataModule(pl.LightningDataModule):
             for attr_name in ["train", "validation", "test"]:
                 setattr(self, attr_name, dataset.get(attr_name, None))
 
+        logger.info(f"Dataset size ...")
+        for attr_name in ["train", "validation", "test"]:
+            ds_split = getattr(self, attr_name)
+            if ds_split is not None :
+                logger.info(f"{attr_name} : %s ..."%len(ds_split))
+
         # https://github.com/huggingface/transformers/blob/master/examples/pytorch/language-modeling/run_clm.py#L442
         """
         if self.max_train_samples is not None and self.train:
@@ -284,6 +289,7 @@ class LMLightningDataModule(pl.LightningDataModule):
             max_samples = getattr(self, "max_%s_samples"%attr_name)
             attr = getattr(self, attr_name)
             if max_samples is not None and attr :
+                logger.info(f"{attr_name} max_samples = %s ..."%max_samples)
                 setattr(self, attr_name, attr.select(range(max_samples)))
 
     def train_dataloader(self) -> Union[DataLoader, List[DataLoader], Dict[str, DataLoader]]:

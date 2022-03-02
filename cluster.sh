@@ -4,7 +4,7 @@
 #SBATCH --mem=85G            # memory (per node)
 #SBATCH --time=0-12:00       # time (DD-HH:MM)
 #SBATCH --partition=main     # priority: unkillable > main > long
-#SBATCH --job-name=KABROLG   #
+#SBATCH --job-name=Grokking  #
 
 module load cuda/10.1
 source ../grokking/bin/activate

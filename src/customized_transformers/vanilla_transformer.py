@@ -1,14 +1,17 @@
 """
 code for vanilla Transformers (Attention is all you need) & BERT, with the option to use TIM (Transformer with Independent Mechanisms) layers
-"""
 
+Attention Is All You Need
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin
+https://arxiv.org/abs/1706.03762
+"""
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 import math
 import itertools
 import numpy as np
-import torch
 
 from .tim import TransformerEncoderLayer, TransformerDecoderLayer
 
@@ -69,7 +72,7 @@ def get_masks(slen, lengths, causal):
 
 def get_padding_masks(slen, lengths):
     """
-    Generate hidden states mask, and optionally an attention mask.
+    Generate hidden states mask
     """
     assert lengths.max().item() <= slen
     bs = lengths.size(0)
