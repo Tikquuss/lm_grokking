@@ -258,6 +258,15 @@ def main(params) :
     n_params = sum(dict((p.data_ptr(), p.numel()) for p in model.parameters()).values())
     logger.info(f"Training new model - Total size={n_params/2**20:.2f}M params")
 
+    pl_model = LMLightningModule(
+        model=model,
+        task=params.task,
+        optimizer_params=params.optimizer_params,
+        lr_factor=params.lr_factor,
+        lr_patience=params.lr_patience,
+        decoder_start_token_id=tokenizer.pad_token_id
+    )
+
     ## Trainer  (https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html)
     logger.info("Trainer building...")
     trainer_config = {
@@ -310,14 +319,6 @@ def main(params) :
 
     ## Training / Evaluation / Prediction
     logger.info("Training / Evaluation / Prediction...")
-    pl_model = LMLightningModule(
-        model=model,
-        task=params.task,
-        optimizer_params=params.optimizer_params,
-        lr_factor=params.lr_factor,
-        lr_patience=params.lr_patience,
-        decoder_start_token_id=tokenizer.pad_token_id
-    )
 
     if params.predict_params :
         # Generate sentences (clm) / fill mask (mlm)

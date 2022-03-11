@@ -42,6 +42,6 @@ chmod +x $filename
 
 # chmod +x cluster.sh
 
-# salloc --gres=gpu:2 -c 6 --mem=32Gb --time=12:00:00 --partition=main --job-name=KABROLG
+# salloc --gres=gpu:2 -c 6 --mem=32Gb --time=12:00:00 --partition=main --job-name=Grokking
 # . cluster.sh
 
