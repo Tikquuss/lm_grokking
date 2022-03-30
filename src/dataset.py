@@ -175,7 +175,7 @@ class LMLightningDataModule(pl.LightningDataModule):
             )
             self.collate_fn = partial(mlm_collate_fn, mask_token_id=self.tokenizer.mask_token_id, mlm_collator = mlm_collator, attn_pad_token_id = 0)
 
-        self.prepare_data()
+        #self.prepare_data()
 
     def prepare_data(self):
         """Preparing the dataset"""
@@ -220,6 +220,7 @@ class LMLightningDataModule(pl.LightningDataModule):
                     dataset_column_names = [] 
                     for k in data_files :
                         dataset_column_names.extend(dataset.column_names[k])
+                    dataset_column_names = list(set(dataset_column_names))
                 else :
                     raise ve
 

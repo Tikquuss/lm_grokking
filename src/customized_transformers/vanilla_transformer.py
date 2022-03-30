@@ -321,7 +321,8 @@ class TransformerModel(nn.Module):
                 self.pred_layer.proj.weight = self.embeddings.weight
 
     def forward(self, x, lengths, causal, src_enc=None, src_len=None, positions=None, langs=None,
-                attention_mask = None, token_type_ids = None # these two parameters allow to have the same parameters as the hugging_face implementation
+                attention_mask = None, token_type_ids = None, # these two parameters allow to have the same parameters as the hugging_face implementation
+                output_hidden_states=False,
     ):
         """
         Inputs:
@@ -373,6 +374,7 @@ class TransformerModel(nn.Module):
         
         # transformer layers
         i, j = 0, 0
+        hidden_states = [tensor]
         for k in range(self.n_layers):
             if k in self.tim_layers_pos :
                 src_mask = attn_mask.repeat(self.n_heads, 1, 1) if causal else None
@@ -396,10 +398,11 @@ class TransformerModel(nn.Module):
                 tensor = self.layer_norm2[i](tensor)
                 i += 1
             tensor *= mask.unsqueeze(-1).to(tensor.dtype)
+            hidden_states.append(tensor)
         # move back sequence length to dimension 0
         tensor = tensor.transpose(0, 1)
 
-        return tensor
+        return tensor, hidden_states if output_hidden_states else None
 
     def predict(self, tensor, pred_mask, y):
         """

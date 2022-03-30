@@ -61,10 +61,11 @@ class Custom2HuggingFace(nn.Module):
 
     def fwd(
         self,
-        input_ids=None,
+        input_ids,
         attention_mask=None,
         token_type_ids=None,
-        position_ids=None
+        position_ids=None,
+        output_hidden_states=False,
     ):
         """
         if not self.hugging_face_transformer :
@@ -81,11 +82,11 @@ class Custom2HuggingFace(nn.Module):
         x = input_ids.transpose(0, 1) # (bs, seq_len) -> (seq_len, bs)
         #lengths = (input_ids != self.pad_index).long().sum(dim=1).to(input_ids.device)
         lengths = (x != self.pad_index).long().sum(dim=0).to(input_ids.device)
-        tensor = self.transformer(x = x, lengths = lengths, causal = self.causal, positions = position_ids,
-                attention_mask = attention_mask, token_type_ids = token_type_ids
+        tensor, hidden_states = self.transformer(x = x, lengths = lengths, causal = self.causal, positions = position_ids,
+                attention_mask = attention_mask, token_type_ids = token_type_ids, output_hidden_states = output_hidden_states
         ) # (seq_len, bs, dim)
 
-        return tensor, x, lengths
+        return tensor, x, lengths, hidden_states
 
     def forward(
         self,
@@ -94,12 +95,13 @@ class Custom2HuggingFace(nn.Module):
         token_type_ids=None,
         position_ids=None,
         labels=None,
+        output_hidden_states=False,
         return_dict=True,
     ):
         """All the options (and sub-options) below work normally"""
         flag = True 
         if flag :
-            hidden_states, _, _ = self.fwd(input_ids, attention_mask, token_type_ids, position_ids)
+            hidden_states, _, _, all_hidden_states = self.fwd(input_ids, attention_mask, token_type_ids, position_ids, output_hidden_states)
             logits = self.transformer.pred_layer.proj(hidden_states.transpose(0, 1)) # (bs, seq_len, vocab_size))
             if labels is not None :
                 loss_fct = torch.nn.CrossEntropyLoss()
@@ -113,7 +115,7 @@ class Custom2HuggingFace(nn.Module):
                     # -100 index = padding token
                     loss = loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
         else :
-            hidden_states, x, lengths = self.fwd(input_ids, attention_mask, token_type_ids, position_ids)
+            hidden_states, x, lengths, all_hidden_states = self.fwd(input_ids, attention_mask, token_type_ids, position_ids, output_hidden_states)
             if self.task == 'clm' :
                 # Shift so that tokens < n predict n
                 alen = torch.arange(lengths.max(), dtype=torch.long, device=lengths.device)
@@ -132,7 +134,7 @@ class Custom2HuggingFace(nn.Module):
                 else :
                     # TOAVOID : params.mask_score has been incorrectly initialized (also, this method needs to call forward a second time to work)
                     x, y, pred_mask = self.mask_out(x)
-                    hidden_states, x, lengths = self.fwd(x.transpose(0, 1), attention_mask, token_type_ids, position_ids)
+                    hidden_states, x, lengths, all_hidden_states = self.fwd(x.transpose(0, 1), attention_mask, token_type_ids, position_ids)
             
             if False :
                 # TOAVOID : it reduces the dimensions of the logits, which will produce an error when computing the accuracy
@@ -146,7 +148,7 @@ class Custom2HuggingFace(nn.Module):
         if not return_dict:
             return logits, loss
 
-        return AttrDict({"loss" : loss, "logits" : logits, "hidden_states" : hidden_states.transpose(0, 1), "attentions" : None})
+        return AttrDict({"loss" : loss, "logits" : logits, "hidden_states" : all_hidden_states, "attentions" : None})
     
     def mask_out(self, x, fp16 = False):
         """

@@ -52,11 +52,6 @@ def file_path(path):
         return path
     else:
         raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid path")
-
-class AttrDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
         
 def str2dic_all(s) :
     """`a=int(0),b=str(y),c=float(0.1)` to {a:0, b:y, c:0.1}"""

@@ -1,9 +1,12 @@
-import torch
 import torch.optim as optim
 import pytorch_lightning as pl
 
+from .utils import AttrDict
 from .metrics import get_compute_metrics_lm
 from .optim import get_optimizer
+from .intrinsics_dimension import mle_id, twonn_numpy, twonn_pytorch
+
+ID_functions = {"twonn" : twonn_pytorch, "mle" : mle_id}
 
 class LMLightningModule(pl.LightningModule):
     """Language Modeling (CLM and MLM) Model"""
@@ -14,7 +17,8 @@ class LMLightningModule(pl.LightningModule):
         optimizer_params: str,
         lr_factor: float,
         lr_patience: int,
-        decoder_start_token_id : int = None
+        decoder_start_token_id : int = None,
+        ID_params : AttrDict = None
     ):
         """
         model : transformer model
@@ -23,6 +27,7 @@ class LMLightningModule(pl.LightningModule):
         lr_factor (float) : learning rate scheduler factor
         lr_patience (int) : learning rate scheduler patience
         decoder_start_token_id (int) : start token of sentences for text generation (clm only)
+        ID_params (AttrDict) : Intrinsic Dimension Estimation parameters
         """
         super(LMLightningModule, self).__init__()
         self.model = model
@@ -31,6 +36,11 @@ class LMLightningModule(pl.LightningModule):
         self.lr_factor = lr_factor
         self.lr_patience = lr_patience
         self.decoder_start_token_id = decoder_start_token_id
+        self.ID = False
+        if ID_params :
+            self.ID_function = ID_functions[ID_params.pop("method")]
+            self.ID_params = ID_params
+            self.ID = True
         self.compute_metrics_lm = get_compute_metrics_lm(task)
         
     def configure_optimizers(self):
@@ -48,14 +58,28 @@ class LMLightningModule(pl.LightningModule):
         }
         return output
             
-    def _compute_loss(self, features, prefix=""):
+    def _compute_loss(self, features, prefix="", ID = False):
+        """ID : Intrinsic Dimension"""
         mask_token_index = features.pop("mask_token_index", None)
+        features["output_hidden_states"] = ID
         output = self.model(**features)
         loss = output.loss 
-        output = self.compute_metrics_lm(features["labels"], output.logits, loss, mask_token_index, prefix)
+        logits = output.logits # (batch_size, seq_len, vocab_size)
+        hidden_states = getattr(output, "hidden_states", None) # (nlayers+1)x(batch_size, seq_len, dim)
+        output = self.compute_metrics_lm(features["labels"], logits, loss, mask_token_index, prefix)
         output["%sloss"%prefix] = loss.item()
+        if ID : output = self.intrinsic_dimension(output, hidden_states)
         return loss, output
     
+    def intrinsic_dimension(self, output, hidden_states):
+        """hidden_states : (nlayers+1)x(batch_size, seq_len, dim)"""
+        for l in range(len(hidden_states)): 
+            h = hidden_states[l] # (batch_size, seq_len, dim)
+            h = h.view(h.size(0), -1) # (batch_size, seq_len*dim)
+            #output[f"ID_layer_{l}"] = twonn_numpy(data=h.cpu().numpy())
+            output[f"ID_layer_{l}"] = self.ID_function(data=h, **self.ID_params)
+        return output
+
     def training_step(self, batch, batch_idx):
         loss, output = self._compute_loss(batch, prefix="train_")
         self.log_dict(output, prog_bar=True)
@@ -63,7 +87,7 @@ class LMLightningModule(pl.LightningModule):
         return output
 
     def validation_step(self, batch, batch_idx):
-        loss, output = self._compute_loss(batch, prefix="val_")
+        loss, output = self._compute_loss(batch, prefix="val_", ID=self.ID)
         self.log_dict(output, prog_bar=True)
         return output
 

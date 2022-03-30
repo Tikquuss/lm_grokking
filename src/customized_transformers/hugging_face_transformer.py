@@ -57,7 +57,8 @@ class HFTransformer(nn.Module):
     #     """
 
     # allow to have the same parameters as our custom vanilla implementation
-    def forward(self, x, lengths, causal, attention_mask, token_type_ids, src_enc=None, src_len=None, positions=None, langs=None):
+    def forward(self, x, lengths, causal, attention_mask, token_type_ids, src_enc=None, src_len=None, positions=None, 
+                output_hidden_states = False, langs=None):
         """
         Inputs:
             `x` LongTensor(slen, bs), containing word indices
@@ -99,11 +100,11 @@ class HFTransformer(nn.Module):
             past_key_values=None,
             use_cache=None,
             output_attentions=None,
-            output_hidden_states=None,
+            output_hidden_states=output_hidden_states,
             return_dict=None
         ) 
         #outputs.hidden_states
         #outputs.attentions
         tensor = outputs[0].transpose(0, 1) # (slen, bs, dim)
-        return tensor
+        return tensor, outputs.get('hidden_states', None)
 

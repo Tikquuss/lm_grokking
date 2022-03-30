@@ -58,13 +58,13 @@ max_length=512
 # If from_pretrained
 model_params=$None
 # For gpt2
-#model_params="n_ctx=int(1024),n_embd=int(768),n_head=int(12),n_layer=int(12),n_positions=int(1024)"
+#model_params="n_ctx=int(1024),n_embd=int(768),n_head=int(12),n_layer=int(12),n_positions=int(${max_length})"
 # For bert
-#model_params="hidden_size=int(768),intermediate_size=int(3072),max_position_embeddings=int(512),num_attention_heads=int(12),num_hidden_layers=int(12)"
+#model_params="hidden_size=int(768),intermediate_size=int(3072),max_position_embeddings=int(${max_length}),num_attention_heads=int(12),num_hidden_layers=int(12)"
 # ...
 # For custom implementation
 #model_params="custom=bool(True),hf_transformer=bool(False),emb_dim=int(768),dim_feedforward=int(3072),n_heads=int(12),n_layers=int(12)"
-#model_params="${model_params},dropout=float(0.1),attention_dropout=float(0.1),n_positions=int(512),gelu_activation=bool(True)"
+#model_params="${model_params},dropout=float(0.1),attention_dropout=float(0.1),n_positions=int(${max_length}),gelu_activation=bool(True)"
 #model_params="${model_params},sinusoidal_embeddings=bool(True),share_inout_emb=bool(True),tim_layers_pos=str(2-3-4),n_s=int(2),use_group_comm=bool(True)"
 
 validation_metrics=val_loss
@@ -99,6 +99,11 @@ predict_params=$None
 ## text generation
 #predict_params="type=str(greedy_search),max_length=int(50)"
 ## ... see trainer.py
+
+## Intrinsic Dimension estimation
+ID_params=$None
+#ID_params="method=str(twonn)"
+#ID_params="method=str(mle),k=int(2),averaging_of_inverses=bool(True)"
 
 python3 -m src.trainer \
 		--model_name $model_name \
@@ -145,4 +150,5 @@ python3 -m src.trainer \
 		--devices auto \
 		--random_seed 2021 \
 		--reload_dataloaders_every_n_epochs $reload_dataloaders_every_n_epochs \
-		--predict_params $predict_params
+		--predict_params $predict_params \
+		--ID_params $ID_params

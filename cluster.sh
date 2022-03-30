@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --gres=gpu:2         # Number of GPUs (per node)
-#SBATCH --cpus-per-task=4    # Number of CPUs
-#SBATCH --mem=85G            # memory (per node)
-#SBATCH --time=0-12:00       # time (DD-HH:MM)
+#SBATCH --cpus-per-task=8    # Number of CPUs
+#SBATCH --mem=48G            # memory (per node)
+#SBATCH --time=00-48:00:00   # time (DD-HH:MM:SS)
 #SBATCH --partition=main     # priority: unkillable > main > long
 #SBATCH --job-name=Grokking  #
 
@@ -40,8 +40,7 @@ chmod +x $filename
 
 # tmux
 
+# salloc --gres=gpu:2 -c 8 --mem=48Gb --time=48:00:00 --partition=main --job-name=Grokking
 # chmod +x cluster.sh
-
-# salloc --gres=gpu:2 -c 6 --mem=32Gb --time=12:00:00 --partition=main --job-name=Grokking
 # . cluster.sh
 

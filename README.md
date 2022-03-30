@@ -49,6 +49,7 @@ See [trainer.py](src/trainer.py) and [train.sh](train.sh) for all other paramete
 ```
 
 ## 5. TensorBoard (visualize the evolution of the loss/acc/... per step/epoch/...)
+See https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html
 ```
 %load_ext tensorboard
 

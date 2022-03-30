@@ -10,7 +10,7 @@ import tqdm
 
 from .dataset import LMLightningDataModule
 from .language_modelling import LMLightningModule
-from .tokenizing import load_tokenizer,  build_tokenizer_from_vocab
+from .tokenizing import load_tokenizer, build_tokenizer_from_vocab
 from .utils import bool_flag, str2dic, str2dic_int, str2dic_all, to_none, intorstr
 from .customized_transformers import Custom2HuggingFace
 
@@ -139,6 +139,12 @@ def get_parser():
             - gpt2 : "type=str(top-p_sampling),max_length=int(50),do_sample=bool(True),top_k=int(0),top_p=float(0.92)"
         """) # model
 
+    # Intrinsic Dimension Estimation
+    parser.add_argument("--ID_params", default="", type=str2dic_all, help="""
+        * TWO-NN : "method=str(twonn)"
+        * Maximum Likelihood Estimation appoach : "method=str(mle),k=int(2),averaging_of_inverses=bool(True)"
+        """)
+
     return parser
 
 class PrintCallback(Callback):
@@ -264,7 +270,8 @@ def main(params) :
         optimizer_params=params.optimizer_params,
         lr_factor=params.lr_factor,
         lr_patience=params.lr_patience,
-        decoder_start_token_id=tokenizer.pad_token_id
+        decoder_start_token_id=tokenizer.pad_token_id,
+        ID_params = params.ID_params
     )
 
     ## Trainer  (https://pytorch-lightning.readthedocs.io/en/stable/common/trainer.html)
@@ -293,7 +300,7 @@ def main(params) :
         "reload_dataloaders_every_n_epochs" : params.reload_dataloaders_every_n_epochs,
         "weights_summary":"full", # "top", None
     }
-    if not params.eval_only and not params.predict_params :
+    if not params.eval_only and not params.predict_params and getattr(pl_data_module, "train", None) is not None :
         trainer_config["log_every_n_steps"] = max(len(pl_data_module.train) // params.batch_size, 1)
     
     if torch.cuda.is_available():
