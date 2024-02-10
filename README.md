@@ -1,7 +1,7 @@
 ## 1. Setting
 ```bash
-git clone https://github.com/Tikquuss/lm_grokking
-cd lm_grokking
+git clone https://github.com/Tikquuss/lm_hf
+cd lm_hf
 
 python3 -m install pip
 pip install -r requirements.txt
